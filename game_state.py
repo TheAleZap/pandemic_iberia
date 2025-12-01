@@ -108,7 +108,15 @@ class GameState:
         while not temp_stack.is_empty():
             self.infection_deck.enqueue(temp_stack.pop())
         
+        if bottom_city is None:
+            return {'city': None, 'color': None, 'cubes_added': 0, 'outbreak_occurred': False, 'supply_exhausted': False, 'epidemic_steps': []}
+        
         color = self.board.get_city_color(bottom_city)
+        if color is None:
+            # City without valid color - skip epidemic
+            self.infection_discard.push(bottom_city)
+            return {'city': bottom_city, 'color': None, 'cubes_added': 0, 'outbreak_occurred': False, 'supply_exhausted': False, 'epidemic_steps': []}
+        
         old_outbreak_count = self.outbreak_count
         
         supply_exhausted = False
@@ -197,12 +205,14 @@ class GameState:
             for card in discard_list:
                 self.infection_deck.enqueue(card)
     
-    def handle_outbreak(self, city, color): # Time Complexity: O(k * degree)
+    def handle_outbreak(self, city, color): # Time Complexity: O(k × degree), Space Complexity: O(k) where k = cities in outbreak chain
         if self.outbreak_count >= self.max_outbreaks:
-            return None
-        visited_this_outbreak = set([city])
+            return False
+        if city is None or color is None:
+            return False
+        visited_this_outbreak = set([city])  # O(k) space - at most k cities in chain
     
-        queue = Queue()
+        queue = Queue()  # O(k) space - at most k cities in chain
         queue.enqueue(city)
         outbreaks_in_chain = 1
         supply_exhausted = False
@@ -247,7 +257,13 @@ class GameState:
                     continue
             
             city = self.infection_deck.dequeue()
+            if city is None:
+                continue
             color = self.board.get_city_color(city)
+            if color is None:
+                # Skip cities without valid colors
+                self.infection_discard.push(city)
+                continue
             
             current_cubes = self.board.get_cube_count(city, color)
             

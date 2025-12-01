@@ -1,19 +1,23 @@
 from data_structures import Queue
 
 
-def bfs_traverse(graph, start, target):  # Time Complexity: O(V + E), classic BFS
-
+def bfs_traverse(graph, start, target):  # Time Complexity: O(V + E), Space Complexity: O(V), classic BFS
+    """
+    Performs BFS to find shortest path from start to target.
+    graph: adjacency list dictionary (from Graph.get_adjacency_list())
+    Returns: list representing path from start to target, or None if no path exists
+    """
     if start == target:
         return [start]
 
     if (start not in graph) or (target not in graph):
         return None
 
-    visited   = set()
-    queue  = Queue()
+    visited   = set()  # O(V) space
+    queue  = Queue()   # O(V) space worst case
     queue.enqueue(start)
     visited.add(start)
-    parent   = {start: None}
+    parent   = {start: None}  # O(V) space
 
     while not queue.is_empty():
         current = queue.dequeue()

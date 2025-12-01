@@ -2,8 +2,12 @@ from data_structures import Graph
 from algorithms import bfs_traverse
 
 
-def bfs_shortest_path(graph, start, end):   # Time Complexity: O(V + E)
-
+def bfs_shortest_path(graph, start, end):   # Time Complexity: O(V + E), Space Complexity: O(V)
+    """
+    Wrapper function for BFS traversal to find shortest path.
+    graph: adjacency list dictionary (from Graph.get_adjacency_list() or CITY_CONNECTIONS)
+    Returns: list representing shortest path from start to end, or None if no path exists
+    """
     return bfs_traverse(graph, start, end)
 
 

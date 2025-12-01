@@ -10,12 +10,13 @@ from pygame_visualizer import PygameMapVisualizer
 from cpu_player import choose_starting_city_for_cpu, choose_cpu_action
 
 
-# bug fix: ensures it runs on windows
+# bug fix: ensures it runs on windows and all platforms
 def get_user_input(prompt=""):  # Time Complexity: O(m)
     if prompt:
         print(prompt, end="", flush=True)
 
     if os.name == "nt":
+        # Windows: use simple input() since select.select() doesn't work with stdin on Windows
         try:
             try:
                 pygame.event.pump()
@@ -30,6 +31,7 @@ def get_user_input(prompt=""):  # Time Complexity: O(m)
             return ""
         return line.strip()
 
+    # Unix-like systems: try select.select() for non-blocking input
     try:
         stdin = sys.stdin
         while True:
@@ -37,12 +39,21 @@ def get_user_input(prompt=""):  # Time Complexity: O(m)
                 pygame.event.pump()
             except (pygame.error, AttributeError):
                 pass
-            readable, _, _ = select.select([stdin], [], [], 0.05)
-            if readable:
-                line = stdin.readline()
-                if not line:
+            try:
+                readable, _, _ = select.select([stdin], [], [], 0.05)
+                if readable:
+                    line = stdin.readline()
+                    if not line:
+                        return ""
+                    return line.strip()
+            except (OSError, ValueError):
+                # select.select() may fail on some systems or file types
+                # Fall back to blocking input
+                try:
+                    line = input()
+                    return line.strip()
+                except (EOFError, OSError, KeyboardInterrupt):
                     return ""
-                return line.strip()
     except (EOFError, OSError, KeyboardInterrupt):
         return ""
 
@@ -192,9 +203,16 @@ class PandemicTextGame:
     def _infect_cities_in_setup(self, count, cube_count): # Time Complexity: O(count × V)
         cities = []
         for _ in range(count):
+            if self.game_state.infection_deck.is_empty():
+                break
             city = self.game_state.infection_deck.dequeue()
+            if city is None:
+                break
             cities.append(city)
             color = self.game_state.board.get_city_color(city)
+            if color is None:
+                # Skip cities without valid colors (should not happen, but safety check)
+                continue
             self.game_state.board.add_cubes(city, color, cube_count)
             self.game_state.infection_discard.push(city)
         return cities
@@ -271,15 +289,28 @@ class PandemicTextGame:
             color_counts = {}
             for card in player.hand:
                 color = self.game_state.board.get_city_color(card)
-                color_counts[color] = color_counts.get(color, 0) + 1
+                if color is not None:
+                    color_counts[color] = color_counts.get(color, 0) + 1
             
-            min_count = min(color_counts.values())
-            min_colors = [color for color, count in color_counts.items() if count == min_count]
-            min_color = random.choice(min_colors)
-            for card in player.hand:
-                if self.game_state.board.get_city_color(card) == min_color:
-                    discard = card
+            if not color_counts:
+                # Fallback: discard first card if no valid colors found
+                discard = next(iter(player.hand), None)
+                if discard is None:
                     break
+            else:
+                min_count = min(color_counts.values())
+                min_colors = [color for color, count in color_counts.items() if count == min_count]
+                min_color = random.choice(min_colors)
+                discard = None
+                for card in player.hand:
+                    if self.game_state.board.get_city_color(card) == min_color:
+                        discard = card
+                        break
+                if discard is None:
+                    # Fallback if no card matches
+                    discard = next(iter(player.hand), None)
+                    if discard is None:
+                        break
             
             player.remove_card(discard)
             self.game_state.player_discard.push(discard)
@@ -469,10 +500,11 @@ class PandemicTextGame:
                     try:
                         self.visualizer.update()
                         last_update = current_time
-                    except Exception as e:
+                    except Exception:
                         if hasattr(self.visualizer, 'running') and not self.visualizer.running:
                             print("\nGame window closed. Exiting...")
                             return
+                        # Silently continue on pygame errors
                         pass
             
             if self.check_win():
@@ -590,11 +622,22 @@ class PandemicTextGame:
 
 
             city = self.game_state.infection_deck.dequeue()
+            if city is None:
+                break
             color = self.game_state.board.get_city_color(city)
+            if color is None:
+                print(f"   Warning: City {city} has no valid color. Skipping infection.")
+                self.game_state.infection_discard.push(city)
+                continue
             current_cubes = self.game_state.board.get_cube_count(city, color)
             city_formatted = self.format_city_name(city)
             
             print(f"   Infection card {i+1}: {city_formatted}")
+            
+            if color is None:
+                print(f"   Warning: {city_formatted} has no valid color. Skipping infection.")
+                self.game_state.infection_discard.push(city)
+                continue
             
             if current_cubes >= 3:
                 print(f"   {city_formatted} already has 3 {color} cubes! Outbreak occurs!")
@@ -614,7 +657,7 @@ class PandemicTextGame:
                     else:
                         print(f"   Chain outbreak! {outbreaks_this_chain} outbreaks occurred. Outbreak tracker: {new_outbreak_count}/8")
                     if new_outbreak_count >= self.game_state.max_outbreaks:
-                        print(f"   Outbreak tracker reached 8! Game Over!")
+                        print("   Outbreak tracker reached 8! Game Over!")
             else:
                 cubes_added = self.game_state.board.add_cubes(city, color, 1)
                 if cubes_added == 0:
@@ -735,14 +778,14 @@ class PandemicTextGame:
                 other_player_num = int(command[20:].strip()) - 1
                 if 0 <= other_player_num < len(self.game_state.players):
                     return self.action_share_knowledge(player, other_player_num, give=True)
-            except:
+            except (ValueError, IndexError, TypeError):
                 pass
         elif command_lower.startswith("take card from player "):
             try:
                 other_player_num = int(command[22:].strip()) - 1
                 if 0 <= other_player_num < len(self.game_state.players):
                     return self.action_share_knowledge(player, other_player_num, give=False)
-            except:
+            except (ValueError, IndexError, TypeError):
                 pass
         
 
@@ -757,6 +800,9 @@ class PandemicTextGame:
             return False
         
         current = player.location
+        if current is None:
+            print("✗ Player has no location set")
+            return False
         
         if destination == current:
             print(f"✗ You are already in {self._format_location(current)}")
@@ -795,6 +841,9 @@ class PandemicTextGame:
             return False
         
         current = player.location
+        if current is None:
+            print("✗ Player has no location set")
+            return False
         
         if destination == current:
             print(f"✗ Cannot build railroad to your current city ({self._format_location(current)})")
@@ -827,7 +876,13 @@ class PandemicTextGame:
     
     def action_build_hospital(self, player): # Time Complexity: O(1)
         current = player.location
+        if current is None:
+            print("✗ Player has no location set")
+            return False
         color = self.game_state.board.get_city_color(current)
+        if color is None:
+            print(f"✗ City {current} has no valid color")
+            return False
         
         if current not in player.hand:
             print(f"✗ You don't have the {self.format_city_name(current)} card in your hand")
@@ -854,6 +909,9 @@ class PandemicTextGame:
             return False
         
         current = player.location
+        if current is None:
+            print("✗ Player has no location set")
+            return False
         cube_count = self.game_state.board.get_cube_count(current, color)
         
         if cube_count == 0:
@@ -871,10 +929,16 @@ class PandemicTextGame:
         other_player = self.game_state.players[other_player_num]
         
         if player.id == other_player.id:
-            print(f"✗ You cannot give or take a card from yourself")
+            print("✗ You cannot give or take a card from yourself")
             return False
         
         current = player.location
+        if current is None:
+            print("✗ Player has no location set")
+            return False
+        if other_player.location is None:
+            print(f"✗ Player {other_player_num + 1} has no location set")
+            return False
         
         if current != other_player.location:
             print(f"✗ You and Player {other_player_num + 1} must be in the same city")
@@ -924,10 +988,13 @@ class PandemicTextGame:
     
     def action_research_disease(self, player): # Time Complexity: O(1) worst case (H ≤ 7, bounded by hand limit)
         current = player.location
+        if current is None:
+            print("✗ Player has no location set")
+            return False
         hospital_color = self.game_state.board.get_hospital_color(current)
         
         if hospital_color is None:
-            print(f"✗ You must be in a city with a hospital")
+            print("✗ You must be in a city with a hospital")
             return False
         
         color_cards = [card for card in player.hand if 

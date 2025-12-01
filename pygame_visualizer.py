@@ -564,17 +564,18 @@ class PygameMapVisualizer:
                     'color': color
                 })
         
-        matching_cube_count = cubes.get(city_color, 0)
-        if matching_cube_count > 0:
-            cube_count = min(matching_cube_count, 3)
-            if city_color in self.cube_images and cube_count in self.cube_images[city_color]:
-                elements.append({
-                    'type': 'cube',
-                    'image': self.cube_images[city_color][cube_count],
-                    'priority': 1,
-                    'color': city_color,
-                    'count': matching_cube_count
-                })
+        if city_color is not None:
+            matching_cube_count = cubes.get(city_color, 0)
+            if matching_cube_count > 0:
+                cube_count = min(matching_cube_count, 3)
+                if city_color in self.cube_images and cube_count in self.cube_images[city_color]:
+                    elements.append({
+                        'type': 'cube',
+                        'image': self.cube_images[city_color][cube_count],
+                        'priority': 1,
+                        'color': city_color,
+                        'count': matching_cube_count
+                    })
         
         for color_name, count in cubes.items():
             if color_name != city_color and count > 0:

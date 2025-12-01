@@ -10,6 +10,8 @@ def choose_starting_city_for_cpu(game_state, player):   # Time Complexity: O(H)
     p1_color = None
     if p1.location:
         p1_color = board.get_city_color(p1.location)
+        if p1_color is None:
+            p1_color = None  # Ensure it's None if invalid
     
     def score_city(city, avoid_color):   # Time Complexity: O(1)
         color = board.get_city_color(city)
@@ -37,6 +39,8 @@ def choose_starting_city_for_cpu(game_state, player):   # Time Complexity: O(H)
 
 
 def calculate_movement_cost(board, current_city, target_city):   # Time Complexity: O(V + E)
+    if current_city is None or target_city is None:
+        return None
     if current_city == target_city:
         return (0, [current_city])
     if board.is_port_city(current_city) and board.is_port_city(target_city):
@@ -73,7 +77,7 @@ def get_next_step_towards_target(board, current_city, target_city):   # Time Com
         return None 
     return path[1]
 
-def is_city_connected_by_railroad(board, city): # Time Complexity: O(V + E) where V = number of cities, E = number of edges
+def is_city_connected_by_railroad(board, city): # Time Complexity: O(1) - dictionary lookup and length check
     rr_graph = board.get_railroad_graph()
     neighbors = rr_graph.get(city, [])
     return len(neighbors) > 0
@@ -135,6 +139,8 @@ def find_hospital_build_target_prioritized(board, player, current_city): # Time 
     return None
 
 def find_three_cube_target_with_cost(board, current_city, max_moves=3): # Time Complexity: O(V + T × (V + E))
+    if current_city is None:
+        return (None, None)
     targets = set()
     for city in board.cities:
         for color in board.DISEASE_COLORS:
@@ -159,6 +165,12 @@ def find_three_cube_target_with_cost(board, current_city, max_moves=3): # Time C
 def choose_cpu_action(game_state, player): # Time Complexity: O((H + V) × (V + E))
     board = game_state.board
     current = player.location
+    
+    if current is None:
+        # Player has no location - try to move to first available city
+        if player.hand:
+            return ("move", next(iter(player.hand)))
+        return ("skip", None)
 
     if player.cpu_committed_plan is not None:
         plan = player.cpu_committed_plan
