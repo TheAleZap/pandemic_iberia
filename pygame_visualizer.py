@@ -3,6 +3,15 @@ import sys
 import os
 
 
+# bug fix: ensures it runs on windows
+def get_resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
+
 class PygameMapVisualizer:
     CITY_COORDINATES = {
         'Albufeira': (193, 1205),
@@ -194,15 +203,16 @@ class PygameMapVisualizer:
     FONT_SIZE = 12
     
     def __init__(self, game_state):  # Time Complexity: O(V) where V = number of cities
-        """
-        Sets up the pygame window, loads all the assets, and prepares
-        cached surfaces so drawing stays reasonably fast while the
-        text game is running in parallel.
-        """
         self.game_state = game_state
         
-        pygame.init()
-        map_path = os.path.join(self.IMAGE_FOLDER, self.MAP_IMAGE_FILE)
+        try:
+            pygame.init()
+        except pygame.error as e:
+            print(f"ERROR: Failed to initialize pygame: {e}")
+            print("This might be a display/graphics driver issue.")
+            sys.exit(1)
+        
+        map_path = get_resource_path(os.path.join(self.IMAGE_FOLDER, self.MAP_IMAGE_FILE))
         
         try:
             original_map_image = pygame.image.load(map_path)
@@ -211,9 +221,13 @@ class PygameMapVisualizer:
             print(f"ERROR: Map image '{map_path}' not found!")
             sys.exit(1)
         
-        screen_info = pygame.display.Info()
-        max_screen_width = screen_info.current_w - 300
-        max_screen_height = screen_info.current_h - 300
+        try:
+            screen_info = pygame.display.Info()
+            max_screen_width = screen_info.current_w - 300
+            max_screen_height = screen_info.current_h - 300
+        except (pygame.error, AttributeError):
+            max_screen_width = 1920 - 300
+            max_screen_height = 1080 - 300
         
         scale_x = max_screen_width / original_width
         scale_y = max_screen_height / original_height
@@ -224,8 +238,13 @@ class PygameMapVisualizer:
         
         self.map_image = pygame.transform.scale(original_map_image, (self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
         
-        self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
-        pygame.display.set_caption("Pandemic Iberia")
+        try:
+            self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
+            pygame.display.set_caption("Pandemic Iberia")
+        except pygame.error as e:
+            print(f"ERROR: Failed to create display window: {e}")
+            print("This might be a display/graphics driver issue.")
+            sys.exit(1)
         
         self.CITY_COORDINATES = {}
         for city, (orig_x, orig_y) in PygameMapVisualizer.CITY_COORDINATES.items():
@@ -235,7 +254,7 @@ class PygameMapVisualizer:
         
         self.hospital_images = {}
         for color, filename in self.HOSPITAL_IMAGES.items():
-            image_path = os.path.join(self.IMAGE_FOLDER, filename)
+            image_path = get_resource_path(os.path.join(self.IMAGE_FOLDER, filename))
             try:
                 img = pygame.image.load(image_path)
                 if self.HOSPITAL_SCALE != 1.0:
@@ -253,7 +272,7 @@ class PygameMapVisualizer:
         for color, cube_dict in self.CUBE_IMAGES.items():
             self.cube_images[color] = {}
             for count, filename in cube_dict.items():
-                image_path = os.path.join(self.IMAGE_FOLDER, filename)
+                image_path = get_resource_path(os.path.join(self.IMAGE_FOLDER, filename))
                 try:
                     img = pygame.image.load(image_path)
                     scale = scale_map.get(count, 1.0)
@@ -269,7 +288,7 @@ class PygameMapVisualizer:
         
         self.player_images = {}
         for player_id, filename in self.PLAYER_IMAGES.items():
-            image_path = os.path.join(self.IMAGE_FOLDER, filename)
+            image_path = get_resource_path(os.path.join(self.IMAGE_FOLDER, filename))
             try:
                 img = pygame.image.load(image_path)
                 if self.PAWN_SCALE != 1.0:
@@ -282,7 +301,7 @@ class PygameMapVisualizer:
                 print(f"Please save your player image as '{filename}' in the '{self.IMAGE_FOLDER}' folder")
                 sys.exit(1)
         
-        railroad_path = os.path.join(self.IMAGE_FOLDER, self.RAILROAD_IMAGE_FILE)
+        railroad_path = get_resource_path(os.path.join(self.IMAGE_FOLDER, self.RAILROAD_IMAGE_FILE))
         try:
             railroad_img = pygame.image.load(railroad_path)
             if self.RAILROAD_SCALE != 1.0:

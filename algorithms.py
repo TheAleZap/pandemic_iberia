@@ -36,12 +36,6 @@ def bfs_traverse(graph, start, target):  # Time Complexity: O(V + E), classic BF
 
 
 def greedy_select(items, score_func, maximize=True, tie_breaker=None):   # Time Complexity: O(n)
-    """
-    This function does a one-pass greedy selection.
-    As a result, it returns one of the following:
-      - a list of all best-scoring items
-      - a single item if you pass a tie_breaker.
-    """
     if not items:
         return [] if tie_breaker is None else None
 

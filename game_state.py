@@ -31,10 +31,6 @@ class Player:
 
 class GameState:
     def __init__(self):  # Time Complexity: O(V + C)
-        """
-        This class is holding everything that defines the current game:
-        board, decks, players, counters, and win/lose flags.
-        """
         self.board = Board()
 
         self.players = []
@@ -62,7 +58,6 @@ class GameState:
         self.player_deck_exhausted = False
     
     def initialize_decks(self):  # Time Complexity: O(C)
-        """Create, shuffle and deal the starting player + infection decks."""
         city_cards = list(self.board.cities)
         random.shuffle(city_cards)
         

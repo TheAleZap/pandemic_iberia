@@ -144,10 +144,6 @@ class Board:
         return self.CITY_CONNECTIONS.get(city, [])
     
     def get_outbreak_neighbors(self, city):   # Time Complexity: O(degree)
-        """
-        Normal neighbors + the few weird special 'outbreak only' edges.
-        We turn it into a set first so we don't get duplicates.
-        """
         regular_neighbors = self.CITY_CONNECTIONS.get(city, [])
         outbreak_only     = self.OUTBREAK_ONLY_CONNECTIONS.get(city, [])
         return list(set(regular_neighbors + outbreak_only))
@@ -162,10 +158,6 @@ class Board:
         return max(0, self.MAX_CUBES_PER_COLOR - self.get_cubes_on_board(color))
     
     def add_cubes(self, city, color, count):   # Time Complexity: O(V)
-        """
-        Tries to add up to `count` cubes of `color` in `city`, but respects
-        the global supply limit. Returns how many were actually placed.
-        """
         supply_remaining = self.get_cube_supply_remaining(color)
         if supply_remaining <= 0:
             return 0

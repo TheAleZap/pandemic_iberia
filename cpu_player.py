@@ -4,10 +4,6 @@ from board import bfs_shortest_path
 
 
 def choose_starting_city_for_cpu(game_state, player):   # Time Complexity: O(H)
-    """
-    Here, we pick a starting city for the CPU using a simple scoring heuristic.
-    Our CPU prefers 3‑cube cities, while also avoiding clashing with Player 1's color.
-    """
     board = game_state.board
     
     p1 = game_state.players[0]
@@ -41,10 +37,6 @@ def choose_starting_city_for_cpu(game_state, player):   # Time Complexity: O(H)
 
 
 def calculate_movement_cost(board, current_city, target_city):   # Time Complexity: O(V + E)
-    """
-    Returns (cost, path) for the cheapest known way to move between two cities.
-    Cost here is expressed in number of actions, not edge count.
-    """
     if current_city == target_city:
         return (0, [current_city])
     if board.is_port_city(current_city) and board.is_port_city(target_city):
@@ -64,7 +56,6 @@ def calculate_movement_cost(board, current_city, target_city):   # Time Complexi
     return None
 
 def can_reach_in_moves(board, current_city, target_city, max_moves):   # Time Complexity: O(V + E)
-    """Convenience wrapper: can we get there in <= max_moves?"""
     result = calculate_movement_cost(board, current_city, target_city)
     if result is None:
         return (False, None, None)
@@ -74,10 +65,6 @@ def can_reach_in_moves(board, current_city, target_city, max_moves):   # Time Co
 
 
 def get_next_step_towards_target(board, current_city, target_city):   # Time Complexity: O(V + E)
-    """
-    Returns the very next hop along a shortest path toward target,
-    or None if no valid movement exists.
-    """
     result = calculate_movement_cost(board, current_city, target_city)
     if result is None:
         return None

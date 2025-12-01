@@ -2,6 +2,7 @@ import random
 import time
 import sys
 import select
+import os
 import pygame
 from game_state import GameState
 from board import bfs_shortest_path
@@ -9,15 +10,32 @@ from pygame_visualizer import PygameMapVisualizer
 from cpu_player import choose_starting_city_for_cpu, choose_cpu_action
 
 
+# bug fix: ensures it runs on windows
 def get_user_input(prompt=""):  # Time Complexity: O(m)
     if prompt:
         print(prompt, end="", flush=True)
+
+    if os.name == "nt":
+        try:
+            try:
+                pygame.event.pump()
+            except (pygame.error, AttributeError):
+                pass
+            line = input()
+            try:
+                pygame.event.pump()
+            except (pygame.error, AttributeError):
+                pass
+        except (EOFError, OSError, KeyboardInterrupt):
+            return ""
+        return line.strip()
+
     try:
         stdin = sys.stdin
         while True:
             try:
                 pygame.event.pump()
-            except pygame.error:
+            except (pygame.error, AttributeError):
                 pass
             readable, _, _ = select.select([stdin], [], [], 0.05)
             if readable:
@@ -25,7 +43,7 @@ def get_user_input(prompt=""):  # Time Complexity: O(m)
                 if not line:
                     return ""
                 return line.strip()
-    except (EOFError, OSError):
+    except (EOFError, OSError, KeyboardInterrupt):
         return ""
 
 def cpu_type_print(text, delay=0.02):  # Time Complexity: O(n)
@@ -144,10 +162,6 @@ The fate of Iberia is now in your hands — may your expedition succeed!
 
 class PandemicTextGame:  
     def __init__(self):  # Time Complexity: O(V) where V = number of cities
-        """
-        High‑level controller for the whole text+pygame version of the game.
-        Responsible for setup, turn loop, and delegating to helper methods.
-        """
         self.game_state = GameState()
         self.visualizer = None
         self.cpu_players = set()
@@ -439,7 +453,7 @@ class PandemicTextGame:
             print(f"Error: Could not initialize pygame visualizer: {e}")
             import traceback
             traceback.print_exc()
-            raise
+            self.visualizer = None
         
         self.setup_game()
         
@@ -449,14 +463,15 @@ class PandemicTextGame:
         while True:
             current_time = time.time()
             if (current_time - last_update) > update_interval:
-                try:
-                    self.visualizer.update()
-                    last_update = current_time
-                except Exception as e:
-                    if hasattr(self.visualizer, 'running') and not self.visualizer.running:
-                        print("\nGame window closed. Exiting...")
-                        return
-                    pass
+                if self.visualizer:
+                    try:
+                        self.visualizer.update()
+                        last_update = current_time
+                    except Exception as e:
+                        if hasattr(self.visualizer, 'running') and not self.visualizer.running:
+                            print("\nGame window closed. Exiting...")
+                            return
+                        pass
             
             if self.check_win():
                 print("\n" + "="*60)
