@@ -169,10 +169,12 @@ class PandemicTextGame:
     
     def update_visualizer(self): # Time Complexity: O(W × H + V) via underlying pygame redraw
         if self.visualizer:
-            self.visualizer.force_update()
+            self.visualizer.mark_dirty()
     
     def find_city_name(self, city_input): # Time Complexity: O(1)
-        city_lower = city_input.lower()
+        if not city_input:
+            return None
+        city_lower = city_input.lower().strip()
         return self._city_name_lookup.get(city_lower)
     
     def format_city_name(self, city): # Time Complexity: O(1)
@@ -458,7 +460,7 @@ class PandemicTextGame:
         self.setup_game()
         
         last_update = 0
-        update_interval = 0.05
+        update_interval = 0.1
         
         while True:
             current_time = time.time()

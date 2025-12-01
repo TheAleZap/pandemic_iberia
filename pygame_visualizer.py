@@ -488,7 +488,7 @@ class PygameMapVisualizer:
             if state_hash != self.last_game_state_hash:
                 self.last_game_state_hash = state_hash
                 return True
-        except:
+        except (AttributeError, KeyError, TypeError):
             return True
         
         return False
@@ -719,7 +719,7 @@ class PygameMapVisualizer:
         
         needs_full_redraw = self.dirty
         
-        if not needs_full_redraw and self.frame_count % 5 == 0:
+        if not needs_full_redraw and self.frame_count % 10 == 0:
             if self.check_city_states_changed():
                 needs_full_redraw = True
         
