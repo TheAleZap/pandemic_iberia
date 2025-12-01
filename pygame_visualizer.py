@@ -720,19 +720,28 @@ class PygameMapVisualizer:
         
         needs_full_redraw = self.dirty
         
-        if not needs_full_redraw and self.frame_count % 10 == 0:
+        # Always check for changes on first frame or when dirty
+        if needs_full_redraw or self.frame_count == 1:
             if self.check_city_states_changed():
                 needs_full_redraw = True
         
+        # Check for background changes
         if self.check_background_needs_rebuild():
             self.build_background_surface()
             needs_full_redraw = True
         
+        # Check for status board changes
         if self.check_status_board_needs_rebuild():
             self.build_status_board_surface()
             needs_full_redraw = True
         
-        if needs_full_redraw:
+        # Periodic check for city state changes (every 10 frames when not dirty)
+        if not needs_full_redraw and self.frame_count % 10 == 0:
+            if self.check_city_states_changed():
+                needs_full_redraw = True
+        
+        # Always render on first frame to ensure initial display
+        if needs_full_redraw or self.frame_count == 1:
             if self.background_surface is not None:
                 self.screen.blit(self.background_surface, (0, 0))
             else:

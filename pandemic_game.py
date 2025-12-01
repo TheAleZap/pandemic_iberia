@@ -181,6 +181,13 @@ class PandemicTextGame:
     def update_visualizer(self): # Time Complexity: O(W × H + V) via underlying pygame redraw
         if self.visualizer:
             self.visualizer.mark_dirty()
+            # Pump events to keep window responsive
+            try:
+                pygame.event.pump()
+                # Do a quick update if possible (non-blocking)
+                self.visualizer.update()
+            except (pygame.error, AttributeError, Exception):
+                pass
     
     def find_city_name(self, city_input): # Time Complexity: O(1)
         if not city_input:
@@ -481,7 +488,11 @@ class PandemicTextGame:
 
         try:
             self.visualizer = PygameMapVisualizer(self.game_state)
-            self.update_visualizer()
+            # Force immediate first render
+            self.visualizer.mark_dirty()
+            self.visualizer.update()
+            # Pump events to ensure window is responsive
+            pygame.event.pump()
         except Exception as e:
             print(f"Error: Could not initialize pygame visualizer: {e}")
             import traceback
@@ -490,10 +501,23 @@ class PandemicTextGame:
         
         self.setup_game()
         
+        # Force update after setup
+        if self.visualizer:
+            self.visualizer.mark_dirty()
+            self.visualizer.update()
+            pygame.event.pump()
+        
         last_update = 0
-        update_interval = 0.1
+        update_interval = 0.05  # More frequent updates
         
         while True:
+            # Always pump pygame events to keep window responsive
+            if self.visualizer:
+                try:
+                    pygame.event.pump()
+                except:
+                    pass
+            
             current_time = time.time()
             if (current_time - last_update) > update_interval:
                 if self.visualizer:
@@ -526,6 +550,10 @@ class PandemicTextGame:
             else:
                 self.play_turn(player)
             self.game_state.next_turn()
+            
+            # Force update after each turn
+            if self.visualizer:
+                self.visualizer.mark_dirty()
         
         if self.visualizer:
             self.visualizer.running = False
